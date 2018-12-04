@@ -9,6 +9,26 @@ import datetime
 import random
 from lxml import etree
 
+Proxies_POOLs =[]
+
+def init_proxiesPOOLs():  #初始化IP代理池
+    global Proxies_POOLs
+    with open('./prxies_pools.csv','r') as f:
+        contents = f.readlines()
+        f.close()
+    num = len(contents)
+    for i in range(num):
+        details = contents[i].split(',')
+        proxy= {details[2].strip('\n') :"%s:%s"%(details[0],details[1])}
+        Proxies_POOLs.append(proxy) 
+
+def get_OneProxy(): # 随机化 返回一个代理IP
+    global Proxies_POOLs
+    proxyNums = len(Proxies_POOLs)
+    proxy = Proxies_POOLs[random.randint(0,proxyNums-1)]
+    #print(proxy)
+    return proxy
+
 def use_proxy(url):
     req=urllib.request.Request(url)
     proxy_addr = None # get_OneProxy()
@@ -48,8 +68,9 @@ def get_OneDayInformation(url,peroid):
                 key_links.append( {'keyword':keywords[k],'link':keywords_link[k]})
             if len(key_links)>0:
                 news[3].append(key_links)
-        
-        #print('Length : news[0] = %s    news[1] = %s news[2] = %s'%(len(news[0]),len(news[1]),len(news[2])))
+            else:
+                news[3].append([])
+        #print('Length : news[0] = %s    news[1] = %s news[2] = %s  news[3]=%s'%(len(news[0]),len(news[1]),len(news[2]),len(news[3]) ))
         nums = len(news[0])
         if (nums>0):
             print("Found %5d news"%nums)
@@ -58,8 +79,13 @@ def get_OneDayInformation(url,peroid):
             return 0
         for i in range(nums):
             day_news.append({'title':news[0][i],'talk_time':news[1][i],'mainnews':news[2][i],'keywords_links':news[3][i]})
-            print("title:%s\ntalk_time: %s\nmainnewes: %s\n"%(news[0][i],news[1][i],news[2][i]))
-            
+            #print("title:%s\ntalk_time: %s\nmainnewes: %s\n"%(news[0][i],news[1][i],news[2][i]))
+            print("%s\n%s\n%s"%(news[0][i],news[1][i],news[2][i]))
+##            print("详情请访问:")
+##            tar = news[3][i]
+##            for x in range(len(tar)):
+##                print("\t%s"%(tar[x]["link"]))
+        print("\n")
         fname = './SolidotNews_%s.json'% peroid
         with open(fname,'w',encoding='utf-8') as f:
             f.write(str(day_news))
@@ -68,13 +94,26 @@ def get_OneDayInformation(url,peroid):
     except etree.ParserError as e: 
             print("At url=%s  \nError type = %s"%(url,e  ))        
  
-    
-def main(): 
+def get_NewsFromDateRange():
     peroid_range = pd.period_range('11/01/2018','12/01/2018',freq='D')
     for day in peroid_range:
         url = "https://www.solidot.org/?issue=%s"%(str(day).replace('-',''))
         print(url)        
-        get_OneDayInformation(url,day)        
+        get_OneDayInformation(url)
+
+        
+def main(): 
+    init_proxiesPOOLs()
+    ResentDaysNews = 3  # '最近三天Solidot网站新闻  1 表示今天
+    ResentDaysNews_list = []
+    for i in range(ResentDaysNews):
+        ResentDaysNews_list.append( (datetime.datetime.now()+datetime.timedelta(days= -(i) )).strftime("%Y%m%d"))
+    print(ResentDaysNews_list)
+    for day in ResentDaysNews_list:
+        url = "https://www.solidot.org/?issue=%s"%(day)
+        get_OneDayInformation(url,day) 
+    return 
+    #get_NewsFromDateRange()
 
  
 if __name__ == '__main__':    
